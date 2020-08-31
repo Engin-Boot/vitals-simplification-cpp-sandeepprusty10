@@ -1,6 +1,13 @@
 #include <assert.h>
 #include <iostream>
 
+struct Vitals
+{
+  float bpm;
+  float spo2;
+  float respRate;
+};
+
 class AlertInterface
 {
   public:
@@ -73,11 +80,11 @@ class VitalsIntegrator
       spo2Checker("spo2", 90, 101, alertPtr),
       respChecker("resp rate", 30, 95, alertPtr)
     {}
-    void checkAllVitals(float bpm, float spo2, float respRate)
+    void checkAllVitals(struct Vitals v)
     {
-      bpmChecker.checkAgainstRange(bpm);
-      spo2Checker.checkAgainstRange(spo2);
-      respChecker.checkAgainstRange(respRate);
+      bpmChecker.checkAgainstRange(v.bpm);
+      spo2Checker.checkAgainstRange(v.spo2);
+      respChecker.checkAgainstRange(v.respRate);
     }
 };
 
@@ -86,6 +93,8 @@ int main()
   AlertIntegrator alerter;  
   VitalsIntegrator vitals(&alerter);
 
-  vitals.checkAllVitals(80, 95, 60);
-  vitals.checkAllVitals(60, 90, 40);
+  struct Vitals v1 = {80,95,60};
+  struct Vitals v2 = {60,90,40};
+  vitals.checkAllVitals(v1);
+  vitals.checkAllVitals(v2);
 }
