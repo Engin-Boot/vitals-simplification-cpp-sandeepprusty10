@@ -1,20 +1,91 @@
 #include <assert.h>
+#include <iostream>
 
-bool vitalIsInLimits(float value, float lowerLimit, float upperLimit)
+class AlertInterface
 {
-  return(value >= lowerLimit && value <= upperLimit);
-}
+  public:
+    virtual void raiseAlert(const char* vitalName, const char* level) = 0;
+};
 
-bool vitalsAreOk(float bpm, float spo2, float respRate)
+class AlertWithSMS: public AlertInterface
 {
-  return(vitalIsInLimits(bpm, 70, 150) && vitalIsInLimits(spo2, 90, 100) && vitalIsInLimits(respRate, 30, 95));
-}
+  public:
+    void raiseAlert(const char* vitalName, const char* level) override
+    {
+      std::cout << "SMS: " << vitalName << " " << level << std::endl;
+    }
+};
 
-int main() {
-  assert(vitalsAreOk(80, 95, 60) == true);
-  assert(vitalsAreOk(60, 90, 40) == false);
-  
-  assert(vitalIsInLimits(60,70,150) == false);
-  assert(vitalIsInLimits(90,70,150) == true);
-  assert(vitalIsInLimits(180,70,150) == false);
+class AlertWithSound: public AlertInterface
+{
+  public:
+    void raiseAlert(const char* vitalName, const char* level) override
+    {
+      std::cout << "Sound: " << vitalName << " " << level << std::endl;  //'what'
+    }
+};
+
+class AlertIntegrator : public AlertInterface
+{
+  private:
+    AlertWithSMS smsAlerter;
+    AlertWithSound soundAlerter;
+  public:
+    void raiseAlert(const char* vitalName, const char* level) override
+    {
+      smsAlerter.raiseAlert(vitalName, level);
+      soundAlerter.raiseAlert(vitalName, level);
+    }
+};
+
+class RangeChecker
+{
+  private:
+    int lower;
+    int upper;
+    const char* vitalName;
+    AlertInterface* alerter;
+  public:
+    RangeChecker(const char* name, int low, int up, AlertInterface* alerterPtr)
+    {
+      vitalName = name;
+      lower = low;
+      upper = up;
+      alerter = alerterPtr;
+    }
+    void checkAgainstRange(float value)
+    {
+      if(value < lower) {
+        alerter->raiseAlert(vitalName, "too low");  //'when'
+      } else if(value > upper) {
+        alerter->raiseAlert(vitalName, "too high");
+      }
+    }
+};
+
+class VitalsIntegrator
+{
+  private:
+    RangeChecker bpmChecker, spo2Checker, respChecker;
+  public:
+    VitalsIntegrator(AlertInterface* alertPtr): 
+      bpmChecker("pulse rate", 70, 150, alertPtr),
+      spo2Checker("spo2", 90, 101, alertPtr),
+      respChecker("resp rate", 30, 95, alertPtr)
+    {}
+    void checkAllVitals(float bpm, float spo2, float respRate)
+    {
+      bpmChecker.checkAgainstRange(bpm);
+      spo2Checker.checkAgainstRange(spo2);
+      respChecker.checkAgainstRange(respRate);
+    }
+};
+
+int main()
+{
+  AlertIntegrator alerter;  
+  VitalsIntegrator vitals(&alerter);
+
+  vitals.checkAllVitals(80, 95, 60);
+  vitals.checkAllVitals(60, 90, 40);
 }
